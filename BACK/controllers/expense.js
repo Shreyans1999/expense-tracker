@@ -1,92 +1,35 @@
-const ExpenseSchema = require("../models/expenseModels");
-const Transaction = require("../models/transactionModels");
+const { 
+  addExpenseService, 
+  getExpensesService, 
+  deleteExpenseService, 
+  updateExpenseService 
+} = require('../services/expenseService');
+const asyncHandler = require('../utilities/asyncHandler');
 
-let addExpense = async (req, res) => {
-    const { title, amount, category, description, date } = req.body;
-    const user_id = req.user._id; // Assuming user ID is available in req.user._id
+// Add expense controller
+const addExpense = asyncHandler(async (req, res) => {
+  const result = await addExpenseService(req.body, req.user._id);
+  res.status(200).json(result);
+});
 
-    const expense = new ExpenseSchema({
-        title,
-        amount,
-        category,
-        description,
-        date,
-        user_id // Assign user_id to the expense
-    });
+// Get expenses controller
+const getExpenses = asyncHandler(async (req, res) => {
+  const expenses = await getExpensesService(req.user._id);
+  res.status(200).json(expenses);
+});
 
-    const transaction = new Transaction({
-        title,
-        amount,
-        category,
-        description,
-        date,
-        type: 'expense',
-        user_id,
-        originalId: expense._id // Assign user_id to the transaction
-    });
+// Delete expense controller
+const deleteExpense = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const result = await deleteExpenseService(id, req.user._id);
+  res.status(200).json(result);
+});
 
-    try {
-        // Validations
-        if (!title || !category || !description || !date) {
-            return res.status(400).json({ message: 'All fields are required' });
-        }
-        
-        await expense.save();
-        await transaction.save();
+// Update expense controller
+const updateExpense = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const result = await updateExpenseService(id, req.body, req.user._id);
+  res.status(200).json(result);
+});
 
-        res.status(200).json({ message: 'Expense Added' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error' });
-    }
-};
-
-let getExpenses = async (req, res) => {
-    try {
-        const user_id = req.user._id; // Assuming user ID is available in req.user._id
-        const expenses = await ExpenseSchema.find({ user_id }).sort({ createdAt: -1 });
-        res.status(200).json(expenses);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error' });
-    }
-};
-
-let deleteExpense = async (req, res) => {
-    const { id } = req.params;
-    try {
-        await ExpenseSchema.findOneAndDelete({ _id: id, user_id: req.user._id });
-        await Transaction.findOneAndDelete({ originalId: id, type: 'expense', user_id: req.user._id });
-        res.status(200).json({ message: 'Expense Deleted' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error' });
-    }
-};
-
-let updateExpense = async (req, res) => {
-    const { id } = req.params;
-    const { title, amount, category, description, date } = req.body;
-    const user_id = req.user._id;
-
-    try {
-        const updatedExpense = await ExpenseSchema.findOneAndUpdate(
-            { _id: id, user_id },
-            { title, amount, category, description, date },
-            { new: true }
-        );
-
-        await Transaction.findOneAndUpdate(
-            { originalId: id, type: 'expense', user_id },
-            { title, amount, category, description, date },
-            { new: true }
-        );
-
-        res.status(200).json(updatedExpense);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error' });
-    }
-};
-
-module.exports = { addExpense, getExpenses, deleteExpense, updateExpense};
+module.exports = { addExpense, getExpenses, deleteExpense, updateExpense };
